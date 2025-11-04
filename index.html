@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Atividade – Módulo 4 (C3: Componentes, Performance e Resiliência)</title>
+<style>
+:root{
+  --peter-river:#3498db;--belize-hole:#2980b9;--emerald:#2ecc71;--nephritis:#27ae60;
+  --sun-flower:#f1c40f;--orange:#f39c12;--carrot:#e67e22;--alizarin:#e74c3c;
+  --border:#1f2a33;--bg:#0f1419;--card:#121a21;--text:#ecf0f1;--muted:#bdc3c7;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:linear-gradient(180deg,#0b1116,#0e141a 40%, #0d141a 100%);color:var(--text);font-family:Inter,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+header{position:sticky;top:0;z-index:10;background:rgba(18,26,33,.9);backdrop-filter:blur(8px);border-bottom:1px solid var(--border)}
+.nav{display:flex;gap:12px;align-items:center;padding:12px 16px}
+.brand{font-weight:900}.brand .dot{color:var(--sun-flower)}
+.container{max-width:1200px;margin:0 auto;padding:20px}
+h1{margin:8px 0 4px}h2{margin:8px 0 4px}p.lead{color:var(--muted);margin:0 0 14px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px;margin:12px 0}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
+.span-6{grid-column:span 6}.span-4{grid-column:span 4}.span-8{grid-column:span 8}.span-12{grid-column:span 12}
+label{font-weight:700;display:block;margin:8px 0 6px}
+input[type=text],input[type=number],textarea,select{width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--border);background:#0d141a;color:var(--text)}
+textarea{min-height:96px;resize:vertical}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.btn{background:var(--belize-hole);border:none;color:#fff;padding:10px 14px;border-radius:12px;font-weight:800;cursor:pointer}
+.btn.secondary{background:#17212a}.btn.ok{background:var(--nephritis)}.btn.warn{background:var(--carrot)}
+.kpi{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.kpi .prog{flex:1;height:10px;background:#0a1218;border:1px solid var(--border);border-radius:999px;overflow:hidden}
+.kpi .prog>div{height:100%;background:linear-gradient(90deg,var(--peter-river),var(--emerald));width:0%}
+.table{width:100%;border-collapse:collapse} .table th,.table td{border:1px solid var(--border);padding:8px 10px;text-align:left} .table th{background:#0f1820}
+.hint{color:var(--muted);font-size:12px}
+.mono{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; font-size:13px}
+@media (max-width:980px){.span-6,.span-4,.span-8{grid-column:span 12}}
+</style>
+</head>
+<body>
+<header>
+  <div class="nav">
+    <div class="brand">PO‑Arquiteto<span class="dot">•</span>Valor</div>
+    <button class="btn secondary" onclick="window.print()">Imprimir/Salvar PDF</button>
+    <button class="btn ok" id="btn-export">Exportar (JSON)</button>
+    <label for="file" class="btn">Importar JSON</label>
+    <input id="file" type="file" accept="application/json" style="display:none"/>
+  </div>
+</header>
+
+<div class="container">
+  <h1>Módulo 4 – C3: Componentes, Performance e Resiliência</h1>
+  <p class="lead">Defina componentes internos para <b>GISA</b> e <b>PET IA</b>, cobrindo design em camadas, performance (DB/Cache), padrões de resiliência (retry/backoff/circuit breaker/DLQ), observabilidade por componente e reuso (Agenda/Pay/Connect).</p>
+
+  <div class="card">
+    <div class="kpi"><div><b>Progresso</b></div><div class="prog"><div id="bar"></div></div><div id="pct">0%</div></div>
+    <div class="hint">Dica: estabeleça um <b>latency budget</b> por fluxo (ex.: Dashboard ≤ 1,5s; Teleconsulta ≤ 800ms) e use cache/índices para ficar dentro do orçamento.</div>
+  </div>
+
+  <div class="card">
+    <h2>A) Inventário de Componentes (por container)</h2>
+    <table class="table" id="comp-table">
+      <thead><tr><th>Produto</th><th>Container</th><th>Componente</th><th>Responsabilidade</th><th>Dependências</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="row" style="margin-top:8px">
+      <button class="btn" id="comp-add">Adicionar linha</button>
+      <button class="btn secondary" id="comp-reset">Resetar exemplos</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>B) Performance – Orçamento de Latência & Antipadrões</h2>
+    <div class="grid">
+      <div class="span-6">
+        <label>Orçamento de Latência por fluxo (GISA)</label>
+        <textarea id="perf-gisa" class="mono">Dashboard (card comum): orçamento 1,5s
+- Frontend render: 300ms
+- API Core: 600ms (Service 300ms + Repo 300ms)
+- DW Query: 400ms
+- Cache: hit rate alvo 80% (reduz latência para ~150ms)</textarea>
+      </div>
+      <div class="span-6">
+        <label>Orçamento de Latência por fluxo (PET IA)</label>
+        <textarea id="perf-pet" class="mono">Teleconsulta (resposta do LLM): orçamento 2,0s
+- ASR/Normalização: 400ms (quando houver áudio curto)
+- Prompt Builder: 200ms
+- LLM Orchestrator: 1,0s (com limites de tokens e cache)
+- Persistência EHR: 200ms</textarea>
+      </div>
+      <div class="span-12">
+        <label>Antipadrões a evitar</label>
+        <textarea id="perf-anti" class="mono">N+1 queries; joins sem índice; large payloads; caching sem invalidação; consultas “SELECT *”; falta de paginação; locks pessimistas prolongados; dependências síncronas em cadeia; falta de compressão</textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>C) Resiliência – Retry/Backoff, Circuit Breaker, DLQ</h2>
+    <table class="table" id="res-table">
+      <thead><tr><th>Fluxo/Componente</th><th>Falha esperada</th><th>Política de retry/backoff</th><th>Circuit breaker</th><th>DLQ/Tratamento</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="row" style="margin-top:8px">
+      <button class="btn" id="res-add">Adicionar linha</button>
+      <button class="btn secondary" id="res-reset">Resetar exemplos</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>D) Observabilidade por Componente</h2>
+    <div class="grid">
+      <div class="span-6">
+        <label>GISA – Campos de log e métricas</label>
+        <textarea id="obs-gisa" class="mono">Logs estruturados: tenantId, traceId, rota, cardId, duração, status, custoQuery
+Métricas: P95 por card; cache hit/miss; custo por consulta; erros por integração
+Traces: API→Service→Repo→DW; tags (cardId, tenantId)</textarea>
+      </div>
+      <div class="span-6">
+        <label>PET IA – Campos de log e métricas</label>
+        <textarea id="obs-pet" class="mono">Logs: tenantId, traceId, sessão, duração, tokensPrompt, tokensResposta (sem PII)
+Métricas: P95 LLM; tempo ASR; custo por sessão; abandono
+Traces: Controller→ASR→Prompt→LLM→EHR; máscara PII</textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>E) Reuso – Módulos compartilháveis entre startups</h2>
+    <div class="grid">
+      <div class="span-4">
+        <label>theGarageAgenda</label>
+        <textarea id="reuse-agenda" class="mono">Adapter de Agenda (API client + mapeadores de domínio); Webhook handler de confirmações/cancelamentos; módulo UI de seleção de horários</textarea>
+      </div>
+      <div class="span-4">
+        <label>theGaragePay</label>
+        <textarea id="reuse-pay" class="mono">Adapter de Pagamentos (orders, status); Reconciliador (webhooks); Regras de split e billing por tenant; SDK de checkout</textarea>
+      </div>
+      <div class="span-4">
+        <label>theGarageConnect</label>
+        <textarea id="reuse-connect" class="mono">Adapter de Mensageria (WhatsApp/Instagram/Facebook); Notificações; Templates; rastreio por traceId</textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>F) Estratégia de Testes</h2>
+    <table class="table" id="test-table">
+      <thead><tr><th>Componente</th><th>Unit</th><th>Integração</th><th>Contrato</th><th>Carga</th><th>Chaos</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="row" style="margin-top:8px">
+      <button class="btn" id="test-add">Adicionar linha</button>
+      <button class="btn secondary" id="test-reset">Resetar exemplos</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <button id="btn-reset" class="btn secondary">Zerar respostas</button>
+    </div>
+    <small>Salvamento automático (localStorage). Exporte/importe JSON.</small>
+  </div>
+</div>
+
+<script>
+const KEY="atividade_mod4_c3_v1";
+
+function load(){ try{ return JSON.parse(localStorage.getItem(KEY))||{} }catch(e){ return {} } }
+function save(s){ localStorage.setItem(KEY, JSON.stringify(s)) }
+
+const DEFAULT_COMP=[
+  ["GISA","Core API","Controller (Cards)","Recebe requisições de cards/insights","Service, Cache, Repo"],
+  ["GISA","Core API","Service (KPIs/Alertas)","Regras de negócio e agregações","Repo, Cache, Adapters"],
+  ["GISA","Core API","Repository (DW/Gold)","Consultas otimizadas e paginação","DW, Cache"],
+  ["GISA","ETL","Extractor (VTEX/Ads)","Paginação, quota e checkpoint","APIs externas, DLQ"],
+  ["GISA","ETL","Transformer/Dedup","Limpeza e deduplicação","Bronze→Silver"],
+  ["PET IA","Teleconsulta API","Controller (Sessões)","Gerencia sessões e autorização","EHR, Agenda/Connect/Pay"],
+  ["PET IA","Audio Service","ASR (Whisper)","Transcrição de áudio","Fila/GPU, Storage"],
+  ["PET IA","Clinical Notes","LLM Orchestrator","Executa prompts com limites de tokens","LLM Provider, EHR"]
+];
+function buildRow(tableId,row){
+  const tr=document.createElement("tr"); row=row||[];
+  const cols = tableId==="test-table"?6:(tableId==="res-table"?5:5);
+  for(let i=0;i<cols;i++){ const td=document.createElement("td"); const inp=document.createElement("input"); inp.type="text"; inp.value=row[i]||""; td.appendChild(inp); tr.appendChild(td); }
+  return tr;
+}
+function readTable(tableId){
+  return Array.from(document.querySelectorAll(`#${tableId} tbody tr`)).map(tr=>{
+    return Array.from(tr.querySelectorAll("input")).map(i=>i.value);
+  });
+}
+function initTable(tableId, stateKey, defaults){
+  const tbody=document.querySelector(`#${tableId} tbody`); tbody.innerHTML="";
+  const s=load(); const rows = s[stateKey] && s[stateKey].length ? s[stateKey] : defaults;
+  rows.forEach(r=> tbody.appendChild(buildRow(tableId,r)));
+}
+
+const DEFAULT_RES=[
+  ["GISA – ETL Extractor","Timeout/quota VTEX","Retry 3x, backoff exponencial (1s/2s/4s)","Open após 5 falhas/30s; half-open 1 min","DLQ com reprocessamento manual"],
+  ["GISA – API Service","Erro no DW","Retry 2x curto; fallback para cache","Open com erro rate>10%","Sem DLQ (síncrono); log e alerta"],
+  ["PET – ASR","Falha GPU/timeout","Reencaminhar para CPU; retry 2x","Open quando fila>limite","DLQ com notificação ao operador"],
+  ["PET – LLM Orchestrator","Quota/tokens excedidos","Retry 2x com truncamento","Fallback p/ modelo menor","DLQ com auditoria de prompt"]
+];
+const DEFAULT_TEST=[
+  ["GISA – Service KPIs","✅","✅","✅ (OpenAPI)","⚪","⚪"],
+  ["GISA – ETL Extractor","✅","✅ (VTEX sandbox)","⚪","✅ (batch)","✅ (simular quota)"],
+  ["PET – LLM Orchestrator","✅","✅ (stubs)","✅ (contrato provider)","⚪","✅ (fallback)"],
+  ["PET – ASR","✅","✅","⚪","✅ (áudios sintéticos)","⚪"]
+];
+
+function computeProgress(){
+  let total=0, filled=0;
+  ["comp-table","res-table","test-table"].forEach(tid=>{
+    document.querySelectorAll(`#${tid} tbody tr`).forEach(tr=>{
+      const inputs=tr.querySelectorAll("input"); total+=inputs.length; inputs.forEach(i=>{ if((i.value||'').trim().length>0) filled++; });
+    });
+  });
+  ["perf-gisa","perf-pet","perf-anti","obs-gisa","obs-pet","reuse-agenda","reuse-pay","reuse-connect"].forEach(id=>{ total++; if((document.getElementById(id).value||'').trim().length>0) filled++; });
+  const pct = total? Math.round(100*filled/total):0;
+  document.getElementById("pct").textContent = pct + "%";
+  document.getElementById("bar").style.width = pct + "%";
+}
+
+function persist(){
+  const s = load();
+  s.comp = readTable("comp-table");
+  s.res = readTable("res-table");
+  s.test = readTable("test-table");
+  ["perf-gisa","perf-pet","perf-anti","obs-gisa","obs-pet","reuse-agenda","reuse-pay","reuse-connect"].forEach(id=>{ s[id] = document.getElementById(id).value });
+  save(s); computeProgress();
+}
+function restore(){
+  initTable("comp-table","comp",DEFAULT_COMP);
+  initTable("res-table","res",DEFAULT_RES);
+  initTable("test-table","test",DEFAULT_TEST);
+  const s=load();
+  ["perf-gisa","perf-pet","perf-anti","obs-gisa","obs-pet","reuse-agenda","reuse-pay","reuse-connect"].forEach(id=>{ if(s[id]!==undefined) document.getElementById(id).value = s[id]; });
+  computeProgress();
+}
+
+document.addEventListener("DOMContentLoaded", ()=>{
+  restore();
+  document.body.addEventListener("input", e=>{ if(e.target.matches("input,textarea")) persist(); });
+  document.getElementById("comp-add").addEventListener("click", ()=>{ document.querySelector("#comp-table tbody").appendChild(buildRow("comp-table")); persist(); });
+  document.getElementById("comp-reset").addEventListener("click", ()=>{ if(confirm("Resetar componentes de exemplo?")){ const s=load(); s.comp = DEFAULT_COMP; save(s); restore(); }});
+  document.getElementById("res-add").addEventListener("click", ()=>{ document.querySelector("#res-table tbody").appendChild(buildRow("res-table")); persist(); });
+  document.getElementById("res-reset").addEventListener("click", ()=>{ if(confirm("Resetar exemplos de resiliência?")){ const s=load(); s.res = DEFAULT_RES; save(s); restore(); }});
+  document.getElementById("test-add").addEventListener("click", ()=>{ document.querySelector("#test-table tbody").appendChild(buildRow("test-table")); persist(); });
+  document.getElementById("test-reset").addEventListener("click", ()=>{ if(confirm("Resetar exemplos de teste?")){ const s=load(); s.test = DEFAULT_TEST; save(s); restore(); }});
+  document.getElementById("btn-export").addEventListener("click", ()=>{
+    const blob=new Blob([localStorage.getItem(KEY)||"{}"],{type:"application/json"});
+    const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="atividade-mod4-c3.json"; a.click(); URL.revokeObjectURL(a.href);
+  });
+  document.getElementById("file").addEventListener("change", e=>{
+    const f=e.target.files[0]; if(!f) return;
+    const r=new FileReader(); r.onload=()=>{ try{ localStorage.setItem(KEY,r.result); restore(); alert("Respostas importadas!"); }catch(err){ alert("Arquivo inválido."); } }; r.readAsText(f);
+  });
+  document.getElementById("btn-reset").addEventListener("click", ()=>{ if(confirm("Zerar respostas desta atividade?")){ localStorage.removeItem(KEY); location.reload(); } });
+});
+</script>
+</body>
+</html>
